@@ -1,64 +1,55 @@
-import numpy as np
-import pandas as pd 
-import matplotlib.pyplot as plt
-import streamlit as st 
+# app.py
+import streamlit as st
 import yfinance as yf
+import pandas as pd
+import matplotlib.pyplot as plt
 
-# Date range
-start = '2010-01-01'
-end = '2019-12-31'
+# ------------------------------
+# Streamlit App Config
+# ------------------------------
+st.set_page_config(
+    page_title="Stock Trend Predictor",
+    page_icon="📈",
+    layout="wide"
+)
 
-st.title('Stock Trend Analysis')
+st.title("📈 Stock Trend Predictor")
+st.write("Enter a stock ticker symbol to get historical data and visualize the closing price trend.")
 
-# User input
-user_input = st.text_input("Enter stock ticker", 'AAPL')
+# ------------------------------
+# User Input
+# ------------------------------
+user_input = st.text_input("Enter Stock Ticker", "AAPL")
+start = st.date_input("Start Date", pd.to_datetime("2010-01-01"))
+end = st.date_input("End Date", pd.to_datetime("today"))
 
-# Download data
-df = yf.download(user_input, start=start, end=end)
+# ------------------------------
+# Fetch Data Safely
+# ------------------------------
+if user_input:
+    try:
+        # Download historical stock data
+        df = yf.download(user_input.strip().upper(), start=start, end=end)
 
-# Show data
-st.subheader('Data from 2010-2019')
-st.write(df.describe())
+        # Check if data was returned
+        if df.empty:
+            st.error("❌ No data found for this ticker. Please check the symbol or date range.")
+        else:
+            st.success(f"✅ Data loaded for {user_input.strip().upper()}")
+            
+            # Show raw data
+            st.subheader("Historical Data")
+            st.dataframe(df)
 
-# Closing price chart
-st.subheader('Closing price vs time chart')
-fig = plt.figure(figsize=(12,6))
-plt.plot(df.Close)
-plt.xlabel('Time')
-plt.ylabel('Price')
-st.pyplot(fig)
+            # Plot Closing Price
+            st.subheader("Closing Price Chart")
+            st.line_chart(df['Close'])
 
-# 100 MA
-st.subheader('Closing price vs time chart with 100MA')
-ma100 = df.Close.rolling(100).mean()
+            # Optional: Show volume
+            st.subheader("Volume Chart")
+            st.line_chart(df['Volume'])
 
-fig = plt.figure(figsize=(12,6))
-plt.plot(df.Close, label='Closing Price')
-plt.plot(ma100, label='100 MA')
-plt.legend()
-st.pyplot(fig)
-
-# 100 MA + 200 MA
-st.subheader('Closing price vs time chart with 100MA and 200MA')
-ma200 = df.Close.rolling(200).mean()
-
-fig = plt.figure(figsize=(12,6))
-plt.plot(df.Close, label='Closing Price')
-plt.plot(ma100, label='100 MA')
-plt.plot(ma200, label='200 MA')
-plt.legend()
-st.pyplot(fig)
-
-# Train-test split visualization
-st.subheader("Train vs Test Data Visualization")
-
-data_training = pd.DataFrame(df['Close'][0:int(len(df)*0.70)])
-data_testing = pd.DataFrame(df['Close'][int(len(df)*0.70):])
-
-fig = plt.figure(figsize=(12,6))
-plt.plot(data_training, label='Training Data')
-plt.plot(range(len(data_training), len(df)), data_testing, label='Testing Data')
-plt.legend()
-st.pyplot(fig)
-
-st.success("App is running successfully without ML model 🚀")
+    except ValueError as ve:
+        st.error(f"Value Error: {ve}")
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {e}")
